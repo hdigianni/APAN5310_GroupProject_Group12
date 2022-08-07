@@ -1,447 +1,721 @@
+
+# GroupProject_Group12
+
+
+################################## Set Session Up: Directory & Packages ##################################
+
 #Set working dataset
-setwd("~/Documents/Columbia Classes/Summer 2022/Group Project")
 
-#Install packages
-install.packages('RPostgreSQL')
-library('RPostgreSQL')
+setwd("C:/Users/19196/Desktop/Columbia University MSAA/_Summer 2022/APAN 5310_SQL/_Group12")
 
+# Install Packages/Load Libraries
+
+
+install.packages("tidyverse")
 install.packages("dplyr")
-library(dplyr)
+install.packages("lubridate")
+install.packages("RPostgres")
+install.packages('RPostgreSQL')
+install.packages('DBI')
 
+
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(RPostgreSQL)
+library(RPostgres)
+library(DBI)
+
+
+
+################################## Load Driver & Connect To Database ##################################
 
 #Load driver
 driver <- dbDriver('PostgreSQL')
 
 #Create connection
-connect <- dbConnect(driver, dbname = "GroupProject1",
-                     host = "localhost", port = 5432,
-                     user = "postgres", password = 123)
+
+pw<- {
+  "changethispassword"
+}
+
+connect <- dbConnect(RPostgres::Postgres()
+                 , host ='localhost'
+                 , port ='5432'
+                 , dbname ='Group12_AK'
+                 , user ='postgres'
+                 , password = pw)
+
+#dbDisconnect(connect)
+#dbUnloadDriver(driver)
+
+
+################################## Create Tables ##################################
 
 #Create tables
+
 locations <- "
 CREATE TABLE locations -- ONE
-	(location_id			serial,
-	 arrest_boro			varchar(4),
-	 x_cord_cd				varchar(10),
-	 y_cord_cd				varchar(10),
-	 latitiude				varchar(20),
-	 longitude				varchar(20),
-	 lon_lat				varchar(60),
-	 
-	 PRIMARY KEY (location_id)
-	
-	);
+(location_id			serial,
+arrest_boro			varchar(4),
+x_cord_cd				varchar(10),
+y_cord_cd				varchar(10),
+latitude				varchar(20),
+longitude				varchar(20),
+
+PRIMARY KEY (location_id)
+
+);
 "
 
 crime_info <- "
 CREATE TABLE crime_info -- TWO
-	(crime_id 				serial,
-	 pd_cd					varchar(6),
-	 pd_desc  		text,
-	 ky_cd					varchar(6),
-	 ofns_desc			text,
-	 law_code				varchar(20),
-	 law_cat_cd				varchar(4),
-	 
-	 PRIMARY KEY (crime_id)
-	
-	);
+(crime_id 			serial,
+pd_cd					  varchar(6),
+pd_desc  		    text,
+ky_cd					  varchar(6),
+ofns_desc			  text,
+law_code				varchar(20),
+law_cat_cd			varchar(4),
+
+PRIMARY KEY (crime_id)
+
+);
 "
 
 judge <- "
 CREATE TABLE judge -- THREE
-	(judge_id				serial,
-	 judge_fname			varchar(20),
-	 judge_lname			varchar(20),
-	 court					varchar(20),
-	 
-	 PRIMARY KEY (judge_id)
-	 	
-	);
+(judge_id				 serial,
+judge_fname			varchar(20),
+judge_lname			varchar(20),
+court					  varchar(40),
+
+PRIMARY KEY (judge_id)
+
+);
 "
 
 case_ruling <- "
 CREATE TABLE case_ruling -- FOUR
-	(case_ruling_id			serial,
-	 ruling					varchar(10),
-	 ruling_desc			text,
-	 judge_id				serial,
-	 
-	 PRIMARY KEY (case_ruling_id),
-	 FOREIGN KEY (judge_id) REFERENCES judge (judge_id)
-		
-	);
+(case_ruling_id			serial,
+ruling					    varchar(10),
+ruling_desc			    text,
+judge_id				    serial,
+
+PRIMARY KEY (case_ruling_id),
+FOREIGN KEY (judge_id) REFERENCES judge (judge_id)
+
+);
 "
 
 perp <- "
 CREATE TABLE perp -- FIVE
-	(perp_id				serial,
-	 perp_age_group			varchar(8),
-	 perp_sex				varchar(12),
-	 perp_race				varchar(10),
+(perp_id				    serial,
+perp_age_group			varchar(8),
+perp_sex				    varchar(12),
+perp_race				    varchar(60),
 
-	 PRIMARY KEY (perp_id),
-	 );
+PRIMARY KEY (perp_id)
+);
 "
 
-presinct <- "
+precinct <- "
 CREATE TABLE precinct -- SIX
-	(precinct_id			serial,
-	 precinct_name 			varchar(20),
-	 precinct_phone			varchar(20),
+(precinct_id			  serial,
+precinct_name 			varchar(20),
+precinct_phone			varchar(20),
 
-	 PRIMARY KEY (precinct_id),
-	);
+PRIMARY KEY (precinct_id)
+);
 "
 
 arrest_officer <- "	
 CREATE TABLE arrest_officer -- SEVEN
-	(officer_badge_id		serial,
-	 precinct_id			serial,
-	 officer_fname			varchar(20),
-	 officer_lname			varchar(20),
-	 officer_contact_no		varchar(20),
+(officer_badge_id		  serial,
+precinct_id			      serial,
+officer_fname			    varchar(20),
+officer_lname			    varchar(40),
+officer_contact_no		varchar(20),
 
-	 PRIMARY KEY (officer_badge_id),
-	 FOREIGN KEY (precinct_id) REFERENCES precinct (precinct_id),
-	);
+PRIMARY KEY (officer_badge_id),
+FOREIGN KEY (precinct_id) REFERENCES precinct (precinct_id)
+);
 "
 
 training <- "	
 CREATE TABLE training -- EIGHT
-	(training_id			serial,
-	 training_type			varchar(10),
-	 training_level			varchar(10),
-	 
-	 PRIMARY KEY (training_id)
-	
-	);
+(training_id			  serial,
+training_type			  varchar(60),
+training_level			varchar(60),
+
+PRIMARY KEY (training_id)
+
+);
 "	
 
 officer_training <- "	
 CREATE TABLE officer_training -- NINE
-	(training_id			serial,
-	 officer_badge_id		serial,
-	 training_date			date,
-	 
-	 PRIMARY KEY (training_id, officer_badge_id, training_date)
-	
-	);
+(training_id			  serial,
+officer_badge_id		serial,
+training_date			  date,
+
+PRIMARY KEY (training_id, officer_badge_id, training_date)
+
+);
 "
 
 ranks <- "	
 CREATE TABLE ranks -- TEN
-	(rank_id				serial,
-	 rank_type				varchar(20),
-	 rank_description		text,
-	 
-	 PRIMARY KEY (rank_id)
-	
-	);
+(rank_id				    serial,
+rank_type				    varchar(20),
+rank_description		text,
+
+PRIMARY KEY (rank_id)
+
+);
 "
 
-officer_ranks <- "
-CREATE TABLE officer_ranks -- ELEVEN
-	(rank_id				serial,
-	 officer_badge_id		serial,
+officer_rank <- "
+CREATE TABLE officer_rank -- ELEVEN
+(rank_id				    serial,
+officer_badge_id		serial,
+rank_date           date,  
 
-	 PRIMARY KEY (rank_id, officer_badge_id, rank_date)
-	
-	);
+PRIMARY KEY (rank_id, officer_badge_id, rank_date)
+
+);
 "
 
 languages <- "	
 CREATE TABLE languages -- TWELVE
-	(language_id			serial,
-	 language_type			varchar(20),
-	 
-	 PRIMARY KEY (language_id, language_type)
-	
-	);
+(language_id			  serial,
+language_type			  varchar(60),
+
+PRIMARY KEY (language_id, language_type)
+
+);
 "
 
-officer_languages <- "
+officer_language <- "
 CREATE TABLE officer_language -- THIRTEEN
-	(officer_badge_id		serial,
-	language_id				serial,
+(officer_badge_id		serial,
+language_id				  serial,
 
-	PRIMARY KEY (officer_badge_id, language_id)
+PRIMARY KEY (officer_badge_id, language_id)
 
-	);
+);
 "
+
+perp_language <- "
+CREATE TABLE perp_language -- FOURTEEN
+(language_id				serial,
+perp_id       			serial,
+
+PRIMARY KEY (perp_id, language_id)
+
+);
+"
+
 
 weapon <- "
-CREATE TABLE weapon -- FOURTEEN
-	(weapon_id 				serial,
-	 weapon_type			varchar(20),
-	 weapon_description		text,
-	 crime_id				serial,
-	 
-	 PRIMARY KEY (weapon_id),
-	 FOREIGN KEY (crime_id) REFERENCES crime_info (crime_id) 
-	
-	);
+CREATE TABLE weapon -- FIFTEEN
+(weapon_id 				    serial,
+weapon_type			      varchar(40),
+weapon_description		text,
+crime_id				      serial,
+
+PRIMARY KEY (weapon_id),
+FOREIGN KEY (crime_id) REFERENCES crime_info (crime_id) 
+
+);
 "
 
 victim <- "
-CREATE TABLE victim -- FIFTEEN
-	(victim_id				serial,
-	 victim_gender			varchar(12),
-	 victim_race			varchar(10),
-	 victim_age				integer,
-	 crime_id				serial,
-	 
-	 PRIMARY KEY (victim_id),
-	 FOREIGN KEY (crime_id) REFERENCES crime_info (crime_id) 
-	
-	);
+CREATE TABLE victim -- SIXTEEN
+(victim_id				  serial,
+victim_gender			  varchar(12),
+victim_race			    varchar(60),
+victim_age			  	integer,
+crime_id				    serial,
+
+PRIMARY KEY (victim_id),
+FOREIGN KEY (crime_id) REFERENCES crime_info (crime_id) 
+
+);
 "
 
 arrest <- "	
-CREATE TABLE arrest -- SIXTEEN
-	(arrest_key				varchar(20), -- Not serial as the key is randomly generated as part of the dataset
-	 arrest_date			date,
- 	 location_id			serial,
-	 crime_id				serial,
-	 perp_id				serial,
-	 officer_badge_id		serial,
-	 case_ruling_id			serial,
-	 
-	 PRIMARY KEY (arrest_key),
-	 FOREIGN KEY (location_id) REFERENCES locations (location_id),
-	 FOREIGN KEY (crime_id) REFERENCES crime_info (crime_id),
-	 FOREIGN KEY (perp_id) REFERENCES perp (perp_id),
-	 FOREIGN KEY (officer_badge_id) REFERENCES arrest_officer (officer_badge_id),
-	 FOREIGN KEY (case_ruling_id) REFERENCES case_ruling (case_ruling_id)
-	 
- 	);
+CREATE TABLE arrest -- SEVENTEEN
+(arrest_key				  varchar(20), -- Not serial as the key is randomly generated as part of the dataset
+arrest_date			    date,
+location_id			    serial,
+crime_id				    serial,
+perp_id				      serial UNIQUE,
+officer_badge_id		serial,
+case_ruling_id			serial,
+
+PRIMARY KEY (arrest_key),
+FOREIGN KEY (location_id) REFERENCES locations (location_id),
+FOREIGN KEY (crime_id) REFERENCES crime_info (crime_id),
+FOREIGN KEY (perp_id) REFERENCES perp (perp_id),
+FOREIGN KEY (officer_badge_id) REFERENCES arrest_officer (officer_badge_id),
+FOREIGN KEY (case_ruling_id) REFERENCES case_ruling (case_ruling_id)
+
+);
 "
 
 substances <- "
-CREATE TABLE substances -- SEVENTEEN
-	(substance_id 			serial,
-	 substabce_street_name	varchar(40),
-	 arrest_key				varchar(20),
-	 
-	 PRIMARY KEY (substance_id),
-	 FOREIGN KEY (arrest_key) REFERENCES arrest (arrest_key)
-	
-	);
+CREATE TABLE substances -- EIGHTEEN
+(substance_id 			    serial,
+substance_street_name	  varchar(40),
+arrest_key				      varchar(20),
+
+PRIMARY KEY (substance_id),
+FOREIGN KEY (arrest_key) REFERENCES arrest (arrest_key)
+
+);
 "
-	
+
 substances_at_arrest <- "
-CREATE TABLE substances_at_arrest -- EIGHTEEN
-	(substance_id 			serial,
-	 arrest_key				varchar(20),
-	 
-	 PRIMARY KEY (substance_id, arrest_key)
-	
-	);
+CREATE TABLE substances_at_arrest -- NINETEEN
+(substance_id 			serial,
+arrest_key				  varchar(20),
+
+PRIMARY KEY (substance_id, arrest_key)
+
+);
 "
 
 #Execute create table statement
+
 dbGetQuery(connect, locations)
 dbGetQuery(connect, crime_info)
 dbGetQuery(connect, judge)
 dbGetQuery(connect, case_ruling)
 dbGetQuery(connect, perp)
-dbGetQuery(connect, presinct)
+dbGetQuery(connect, precinct)
 dbGetQuery(connect, arrest_officer)
 dbGetQuery(connect, training)
 dbGetQuery(connect, officer_training)
 dbGetQuery(connect, ranks)
-dbGetQuery(connect, officer_ranks)
+dbGetQuery(connect, officer_rank)
 dbGetQuery(connect, languages)
-dbGetQuery(connect, officer_languages)
+dbGetQuery(connect, officer_language)
+dbGetQuery(connect, perp_language)
 dbGetQuery(connect, weapon)
 dbGetQuery(connect, victim)
 dbGetQuery(connect, arrest)
 dbGetQuery(connect, substances)
 dbGetQuery(connect, substances_at_arrest)
 
+# Verify tables
+
+dbListTables(connect)
+
+
+
+################################## Load & Clean Datasets in R ##################################
 
 #Load data
-arrest_data <- read.csv('/Users/hayley/Documents/Columbia Classes/Summer 2022/Group Project/NYPD_Arrests_Data__Historic.csv')
-court_data <- read.csv('/Users/hayley/Documents/Columbia Classes/Summer 2022/Group Project/court_data.csv')
+
+arrest_data <- read.csv('C:/Users/19196/Desktop/Columbia University MSAA/_Summer 2022/APAN 5310_SQL/_Group12/NYPD_Arrests_Data__Historic.csv')
+court_data <- read.csv('C:/Users/19196/Desktop/Columbia University MSAA/_Summer 2022/APAN 5310_SQL/_Group12/court_data.csv')
 
 
-#Filter data to create subset
-arrest_data_dates <- mutate(arrest_data, ArrestDate = as.Date(ARREST_DATE, format= "%m/%d/%Y"))
+#Resolve misspelled "presinct" to correct spelling "precinct" (several columns) in court_data
+
+colnames(court_data)[colnames(court_data) == 'presinct_id'] <- 'precinct_id'
+colnames(court_data)[colnames(court_data) == 'presinct_name'] <- 'precinct_name'
+colnames(court_data)[colnames(court_data) == 'presinct_phone'] <- 'precinct_phone'
+
+
+#Check class type & Format court_data arrest_date into proper R format
+
+class(court_data$arrest_date)
+court_data$arrest_date2 <- as.Date(court_data$arrest_date, format = "%m/%d/%y")  
+
+
+#Filter data to create subset for arrest_data
+
+arrest_data_dates <- mutate(arrest_data, ArrestDate = as.Date(ARREST_DATE, format = "%m/%d/%Y"))
 arrest_data <- arrest_data_dates %>% filter(ArrestDate >= '2020-01-01')
 arrest_data <- arrest_data %>% top_n(1000)
 
-#Transform and load location table
-location_data <- data.frame('location' = unique(arrest_data$Lon_Lat))
-location_data$location_id <- 1:nrow(location_data)
-location_id_list <- sapply(arrest_data$Lon_Lat, function(x) location_data$location_id[location_data$location == x])
-arrest_data$location_id <- location_id_list
-location <- data.frame('location' = arrest_data$location_id, arrest_data$Lon_Lat, arrest_data$ARREST_BORO,
-                       arrest_data$X_COORD_CD, arrest_data$Y_COORD_CD, arrest_data$Latitude, arrest_data$Longitude)
-dbWriteTable(connect, name="location", value=location, row.names=FALSE, append=TRUE)
 
-  
+#Remove old date columns and re-order properly formated date columsn in arrest_data & court_data
+
+arrest_data$ARREST_DATE <- NULL
+
+colnames(arrest_data)
+
+arrest_data <- arrest_data %>%
+  relocate(ArrestDate, .before = PD_CD)
+
+arrest_data <- arrest_data %>%
+  rename(arrest_date = ArrestDate)
+
+#
+
+court_data$arrest_date <- NULL
+
+colnames(court_data)
+
+court_data <- court_data %>%
+  relocate(arrest_date2, .before = ruling)
+
+court_data <- court_data %>%
+  rename(arrest_date = arrest_date2)
+
+
+# Drop Vehicle related columns in court_data - since we decided not to use
+
+court_data$vehicle_make <- NULL
+court_data$vehicle_model <- NULL
+court_data$vehicle_year <- NULL
+court_data$vehicle_color <- NULL
+court_data$vehicle_type <- NULL
+court_data$vehicle_plate_num <- NULL
+
+
+#Drop Lon_Lat from arrest_data - as this is basically duplicated information (combo of longitude & latitude)
+
+arrest_data$Lon_Lat <- NULL
+
+
+#Subset NA/Empty rows from court_data (1001-1023) to have 1000 fully populated rows
+
+Ctest <- court_data
+Ctest <- Ctest[-(1001:1023),]
+court_data <- Ctest
+
+
+#Subset rows from arrest_data (1001-1023) to have 1000 fully populated rows matching court_data
+
+Atest <- arrest_data
+Atest <- Atest[-(1001:1023),]
+arrest_data <- Atest
+
+#Remove Atest and Ctest from Global Environment for organizing purposes
+
+rm(Atest, Ctest)
+
+
+#Columns training_date and rank_date and re-order in proper place
+
+new_court <- court_data
+
+new_court$training_date <- new_court$arrest_date
+new_court$rank_date <- new_court$arrest_date
+
+court_data <- new_court
+
+rm(new_court)
+
+# 
+
+court_data <- court_data %>%
+  relocate(training_date, .before = training_type)
+
+court_data <- court_data %>%
+  relocate(rank_date, .before = rank_type)
+
+colnames(court_data)
+
+
+
+
+################################## Merge arrest_data & court_data ##################################
+
+
+#Merge arrest_data and court_data into one dataframe
+
+arrest_copy <- arrest_data
+court_copy <- court_data
+
+merged_data <- merge(arrest_copy, court_copy, by = "ARREST_KEY")
+
+#Remove redudant arrest related date column
+
+merged_data$arrest_date.x <- NULL
+
+
+#Rename and Re-Order arrest related date column to match attribute naming convention
+
+merged_data <- merged_data %>%
+  rename(arrest_date = arrest_date.y)
+
+
+colnames(merged_data)
+
+merged_data <- merged_data %>%
+  relocate(arrest_date, .before = PD_CD)
+
+
+
+
+################################## Transform & Load Data To Tables ##################################
+
+
+colnames(merged_data) 
+
+
+#Transform and load location table
+
+
+location_data <- data.frame('locations' = unique(merged_data$ARREST_KEY))
+location_data$location_id <- 1:nrow(location_data)
+location_id_list <- sapply(merged_data$ARREST_KEY, function(x) location_data$location_id[location_data$locations == x])
+merged_data$location_id <- location_id_list
+locations <- data.frame('location_id' = merged_data$location_id, 'arrest_boro' = merged_data$ARREST_BORO,
+                       'x_cord_cd' = merged_data$X_COORD_CD, 'y_cord_cd' = merged_data$Y_COORD_CD,
+                       'latitude' = merged_data$Latitude, 'longitude' = merged_data$Longitude)
+dbWriteTable(connect, name = "locations", value = locations, row.names = FALSE, append = TRUE)
+
+
 #Transform and load crime_info table
-crime_info_data <- data.frame('Crime_Info' = unique(arrest_data$ARREST_KEY))
+
+crime_info_data <- data.frame('crime_info' = unique(merged_data$ARREST_KEY))
 crime_info_data$crime_id <- 1:nrow(crime_info_data)
-crime_info_list <- sapply(arrest_data$ARREST_KEY, 
-                          function(x) crime_info_data$crime_id[crime_info_data$Crime_Info == x])
-arrest_data$crime_id <- crime_info_list
-crime_info <- data.frame('crime_info' = arrest_data$crime_id, arrest_data$PD_CD, arrest_data$PD_DESC,
-                         arrest_data$KY_CD, arrest_data$OFNS_DESC, arrest_data$LAW_CODE, arrest_data$LAW_CAT_CD)
-dbWriteTable(connect, name="crime_info", value=crime_info, row.names=FALSE, append=TRUE)
+crime_info_list <- sapply(merged_data$ARREST_KEY, 
+                          function(x) crime_info_data$crime_id[crime_info_data$crime_info == x])
+merged_data$crime_id <- crime_info_list
+crime_info <- data.frame('crime_id' = merged_data$crime_id, 'pd_cd' = merged_data$PD_CD,
+                         'pd_desc' = merged_data$PD_DESC, 'ky_cd' = merged_data$KY_CD,
+                         'ofns_desc' = merged_data$OFNS_DESC, 'law_code' = merged_data$LAW_CODE,
+                         'law_cat_cd' = merged_data$LAW_CAT_CD)
+dbWriteTable(connect, name ="crime_info", value = crime_info, row.names = FALSE, append = TRUE)
 
 
 #Transform and load judge table
-judge_data <- data.frame('judge' = unique(court_data$judge_lname))
-judge_data$judge_id <- 1:nrow(judge_data)
-judge_list <- sapply(court_data$judge_lname, 
-                            function(x) judge_data$judge_id[judge_data$judge == x])
-court_data$judge_id <- judge_list
-judge <- data.frame('judge' = court_data$judge_id, court_data$judge_fname, court_data$judge_lname, court_data$court)
-dbWriteTable(connect, name="judge", value=judge, row.names=FALSE, append=TRUE)
 
+judge_data <- data.frame('judge' = unique(merged_data$ARREST_KEY))
+judge_data$judge_id <- 1:nrow(judge_data)
+judge_list <- sapply(merged_data$ARREST_KEY, 
+                     function(x) judge_data$judge_id[judge_data$judge == x])
+merged_data$judge_id <- judge_list
+judge <- data.frame('judge_id' = merged_data$judge_id, 'judge_fname' = merged_data$judge_fname,
+                    'judge_lname' = merged_data$judge_lname, 'court' = merged_data$court)
+dbWriteTable(connect, name = "judge", value = judge, row.name = FALSE, append = TRUE)
 
 
 #Transform and load case_ruling table
-case_ruling_data <- data.frame('case_ruling' = unique(court_data$ruling_desc))
+
+case_ruling_data <- data.frame('case_ruling' = unique(merged_data$ARREST_KEY))
 case_ruling_data$case_ruling_id <- 1:nrow(case_ruling_data)
-case_ruling_list <- sapply(court_data$ruling_desc, 
-                     function(x) case_ruling_data$case_ruling_id[case_ruling_data$case_ruling == x])
-court_data$case_ruling_id <- case_ruling_list
-case_ruling <- data.frame('case_ruling' = court_data$case_ruling_id, court_data$ruling, court_data$ruling_desc, 
-                          court_data$judge_id)
-dbWriteTable(connect, name="case_ruling", value=case_ruling, row.names=FALSE, append=TRUE)
+case_ruling_list <- sapply(merged_data$ARREST_KEY, 
+                           function(x) case_ruling_data$case_ruling_id[case_ruling_data$case_ruling == x])
+merged_data$case_ruling_id <- case_ruling_list
+case_ruling <- data.frame('case_ruling_id' = merged_data$case_ruling_id, 'ruling' = merged_data$ruling,
+                          'ruling_desc' = merged_data$ruling_desc, 'judge_id' = merged_data$judge_id)
+dbWriteTable(connect, name = "case_ruling", value = case_ruling, row.names = FALSE, append = TRUE)
 
 
-  
+
 #Transform and load perp table
-perp_data <- data.frame('perp' = unique(arrest_data$ARREST_KEY))
+
+perp_data <- data.frame('perp' = unique(merged_data$ARREST_KEY))
 perp_data$perp_id <- 1:nrow(perp_data)
-perp_list <- sapply(arrest_data$ARREST_KEY, 
-                             function(x) perp_data$perp_id[perp_data$perp == x])
-arrest_data$perp_id <- perp_list
-perp <- data.frame('perp' = arrest_data$perp_id, arrest_data$AGE_GROUP, arrest_data$PERP_SEX, 
-                            arrest_data$PERP_RACE)
-dbWriteTable(connect, name="perp", value=perp, row.names=FALSE, append=TRUE)  
+perp_list <- sapply(merged_data$ARREST_KEY, 
+                    function(x) perp_data$perp_id[perp_data$perp == x])
+merged_data$perp_id <- perp_list
+perp <- data.frame('perp_id' = merged_data$perp_id, 'perp_age_group'= merged_data$AGE_GROUP,
+                   'perp_sex' = merged_data$PERP_SEX, 'perp_race'= merged_data$PERP_RACE)
+dbWriteTable(connect, name ="perp", value = perp, row.names = FALSE, append = TRUE)  
 
 
 
-#Transform and load presinct table
-presinct <- data.frame('presinct' = court_data$presinct_id, court_data$presinct_name, court_data$presinct_phone)
-dbWriteTable(connect, name="perp", value=perp, row.names=FALSE, append=TRUE)  
+#Transform and load precinct table
 
+precinct <- data.frame('precinct_id' = merged_data$precinct_id, 'precinct_name' = merged_data$precinct_name,
+                       'precinct_phone' = merged_data$precinct_phone)
+dbWriteTable(connect, name = "precinct", value = precinct, row.names = FALSE, append = TRUE)  
 
 
 #Transform and load arrest_officer table
-arrest_officer_data <- data.frame('arrest_officer' = unique(court_data$officer_contact_no))
-arrest_officer_data$officer_badge_id <- 1:nrow(arrest_officer_data)
-arrest_officer_list <- sapply(court_data$officer_contact_no, 
-                    function(x) arrest_officer_data$officer_badge_id[arrest_officer_data$arrest_officer == x])
-court_data$officer_badge_id <- arrest_officer_list
-arrest_officer <- data.frame('arrest_officer' = court_data$officer_badge_id, court_data$presinct_id, 
-                             court_data$officer_fname, court_data$officer_lname, court_data$officer_contact_no)
-dbWriteTable(connect, name="arrest_officer", value=arrest_officer, row.names=FALSE, append=TRUE)  
 
+arrest_officer_data <- data.frame('arrest_officer' = unique(merged_data$officer_contact_no))
+arrest_officer_data$officer_badge_id <- 1:nrow(arrest_officer_data)
+arrest_officer_list <- sapply(merged_data$officer_contact_no, 
+                              function(x) arrest_officer_data$officer_badge_id[arrest_officer_data$arrest_officer == x])
+merged_data$officer_badge_id <- arrest_officer_list
+arrest_officer <- data.frame('officer_badge_id' = merged_data$officer_badge_id,
+                             'precinct_id' = merged_data$precinct_id, 
+                             'officer_fname' = merged_data$officer_fname, 'officer_lname'= merged_data$officer_lname,
+                             'officer_contact_no'= merged_data$officer_contact_no)
+dbWriteTable(connect, name="arrest_officer", value = arrest_officer, row.names = FALSE, append = TRUE)  
 
 
 #Transform and load training table
-training_data <- data.frame('training' = unique(court_data$training_type))
+
+training_data <- data.frame('training' = unique(merged_data$ARREST_KEY))
 training_data$training_id <- 1:nrow(training_data)
-training_list <- sapply(court_data$training_type, 
-                                function(x) training_data$training_id[training_data$training == x])
-court_data$training_id <- training_list
-training <- data.frame('training' = court_data$training_id, court_data$training_type, 
-                               court_data$training_level)
-dbWriteTable(connect, name="training", value=training, row.names=FALSE, append=TRUE)
+training_list <- sapply(merged_data$ARREST_KEY, 
+                        function(x) training_data$training_id[training_data$training == x])
+merged_data$training_id <- training_list
+training <- data.frame('training_id' = merged_data$training_id, 'training_type' = merged_data$training_type, 
+                       'training_level' = merged_data$training_level)
+dbWriteTable(connect, name="training", value = training, row.names = FALSE, append = TRUE)
 
 
 
 #Transform and load officer_training table
-officer_training <- data.frame('officer_training' = court_data$training_id, court_data$officer_badge_id)
-dbWriteTable(connect, name="officer_training", value=officer_training, row.names=FALSE, append=TRUE)
+
+officer_training <- data.frame('training_id' = merged_data$training_id, 'officer_badge_id' = merged_data$officer_badge_id,
+                               'training_date' = merged_data$training_date)
+dbWriteTable(connect, name ="officer_training", value = officer_training, row.names = FALSE, append = TRUE)
 
 
 
 #Transform and load rank table
-rank_data <- data.frame('rank' = unique(court_data$rank_type))
-rank_data$rank_id <- 1:nrow(rank_data)
-rank_list <- sapply(court_data$rank_type, 
-                        function(x) rank_data$rank_id[rank_data$rank == x])
-court_data$rank_id <- rank_list
-rank <- data.frame('rank' = court_data$rank_id, court_data$rank_type, 
-                       court_data$rank_description)
-dbWriteTable(connect, name="training", value=training, row.names=FALSE, append=TRUE)
 
+rank_data <- data.frame('rank' = unique(merged_data$ARREST_KEY))
+rank_data$rank_id <- 1:nrow(rank_data)
+rank_list <- sapply(merged_data$ARREST_KEY, 
+                    function(x) rank_data$rank_id[rank_data$rank == x])
+merged_data$rank_id <- rank_list
+rank <- data.frame('rank_id' = merged_data$rank_id, 'rank_type' = merged_data$rank_type, 
+                   'rank_description' = merged_data$rank_description)
+dbWriteTable(connect, name="rank", value = rank, row.names = FALSE, append = TRUE)
 
 
 #Transform and load officer_rank table
-officer_rank <- data.frame('officer_rank' = court_data$rank_id, court_data$officer_badge_id)
-dbWriteTable(connect, name="officer_rank", value=officer_rank, row.names=FALSE, append=TRUE)
 
+officer_rank <- data.frame('rank_id' = merged_data$rank_id, 'officer_badge_id' = merged_data$officer_badge_id,
+                           'rank_date' = merged_data$rank_date)
+dbWriteTable(connect, name="officer_rank", value = officer_rank, row.names = FALSE, append = TRUE)
 
 
 #Transform and load languages table
-languages_data <- data.frame('languages' = unique(court_data$language_type))
+
+languages_data <- data.frame('languages' = unique(merged_data$ARREST_KEY))
 languages_data$languages_id <- 1:nrow(languages_data)
-languages_list <- sapply(court_data$language_type, 
-                      function(x) languages_data$languages_id[languages_data$languages == x])
-court_data$languages_id <- languages_list
-languages <- data.frame('rank' = court_data$languages_id, court_data$language_type)
-dbWriteTable(connect, name="language", value=languages, row.names=FALSE, append=TRUE)
+languages_list <- sapply(merged_data$ARREST_KEY, 
+                         function(x) languages_data$languages_id[languages_data$languages == x])
+merged_data$languages_id <- languages_list
+languages <- data.frame('language_id' = merged_data$languages_id, 'language_type' = merged_data$language_type)
+dbWriteTable(connect, name ="languages", value = languages, row.names = FALSE, append = TRUE)
 
 
 
 #Transform and load officer_language table
-officer_language <- data.frame('officer_language' = court_data$languages_id, court_data$officer_badge_id)
-dbWriteTable(connect, name="officer_language", value=officer_language, row.names=FALSE, append=TRUE)
+
+officer_language <- data.frame('language_id' = merged_data$languages_id, 
+                               'officer_badge_id' = merged_data$officer_badge_id)
+dbWriteTable(connect, name = "officer_language", value = officer_language, row.names = FALSE, append = TRUE)
 
 
-  
+
+#Transform and load perp_language table
+
+perp_language <- data.frame('perp_id' = merged_data$perp_id, 
+                            'language_id' = merged_data$languages_id)
+dbWriteTable(connect, name = "perp_language", value = perp_language, row.names = FALSE, append = TRUE)
+
+
+
 #Transform and load weapon table
-weapon_data <- data.frame('weapon' = unique(court_data$weapon_type))
+
+weapon_data <- data.frame('weapon' = unique(merged_data$ARREST_KEY))
 weapon_data$weapon_id <- 1:nrow(weapon_data)
-weapon_list <- sapply(court_data$weapon_type, 
-                           function(x) weapon_data$weapon_id[weapon_data$weapon == x])
-court_data$weapon_id <- weapon_list
-weapon <- data.frame('weapon' = court_data$weapon_id, court_data$weapon_type, court_data$weapon_description,
-                     arrest_data$crime_id)
-dbWriteTable(connect, name="weapon", value=weapon, row.names=FALSE, append=TRUE)
+weapon_list <- sapply(merged_data$ARREST_KEY, 
+                      function(x) weapon_data$weapon_id[weapon_data$weapon == x])
+merged_data$weapon_id <- weapon_list
+weapon <- data.frame('weapon_id' = merged_data$weapon_id, 'weapon_type' = merged_data$weapon_type,
+                     'weapon_description' = merged_data$weapon_description, 'crime_id' = merged_data$crime_id)
+dbWriteTable(connect, name="weapon", value = weapon, row.names = FALSE, append = TRUE)
 
 
-  
 #Transform and load victim table
-victim_data <- data.frame('victim' = unique(court_data$ARREST_KEY))
+
+victim_data <- data.frame('victim' = unique(merged_data$ARREST_KEY))
 victim_data$victim_id <- 1:nrow(victim_data)
-victim_list <- sapply(court_data$ARREST_KEY, 
-                        function(x) victim_data$victim_id[victim_data$victim == x])
-court_data$victim_id <- victim_list
-victim <- data.frame('victim' = court_data$victim_id, court_data$victim_gender, court_data$victim_race,
-                       court_data$victim_age, arrest_data$crime_id)
-dbWriteTable(connect, name="victim", value=victim, row.names=FALSE, append=TRUE)
+victim_list <- sapply(merged_data$ARREST_KEY, 
+                      function(x) victim_data$victim_id[victim_data$victim == x])
+merged_data$victim_id <- victim_list
+victim <- data.frame('victim_id' = merged_data$victim_id, 'victim_gender' = merged_data$victim_gender,
+                     'victim_race' = merged_data$victim_race, 'victim_age' = merged_data$victim_age,
+                     'crime_id' = merged_data$crime_id)
+dbWriteTable(connect, name ="victim", value = victim, row.names = FALSE, append = TRUE)
 
-  
-  
+
 #Transform and load arrest table
-arrest <- data.frame('arrest' = arrest_data$ARREST_KEY, arrest_data$ArrestDate, arrest_data$location_id
-                     arrest_data$crime_id, arrest_data$perp_id, court_data$officer_badge_id, 
-                     court_data$case_ruling_id)
-dbWriteTable(connect, name="arrest", value=arrest, row.names=FALSE, append=TRUE)
+
+arrest <- data.frame('arrest_key' = merged_data$ARREST_KEY, 'arrest_date' = merged_data$arrest_date,
+                     'location_id' = merged_data$location_id, 'crime_id' = merged_data$crime_id,
+                     'perp_id' = merged_data$perp_id, 'officer_badge_id' = merged_data$officer_badge_id, 
+                     'case_ruling_id' = merged_data$case_ruling_id)
+dbWriteTable(connect, name = "arrest", value = arrest, row.names = FALSE, append = TRUE)
 
 
-  
-#Transform and load substance table
-substance_data <- data.frame('substance' = unique(court_data$substance_street_name))
+#Transform and load substances table
+
+substance_data <- data.frame('substances' = unique(merged_data$ARREST_KEY))
 substance_data$substance_id <- 1:nrow(substance_data)
-substance_list <- sapply(court_data$substance_street_name, 
-                        function(x) substance_data$substance_id[substance_data$substance == x])
-court_data$substance_id <- substance_list
-substance <- data.frame('substance' = court_data$substance_id, court_data$substance_street_name, 
-                        court_data$ARREST_KEY)
-dbWriteTable(connect, name="substance", value=substance, row.names=FALSE, append=TRUE)
+substance_list <- sapply(merged_data$ARREST_KEY, 
+                         function(x) substance_data$substance_id[substance_data$substances == x])
+merged_data$substance_id <- substance_list
+substances <- data.frame('substance_id' = merged_data$substance_id,
+                        'substance_street_name' = merged_data$substance_street_name, 
+                        'arrest_key' = merged_data$ARREST_KEY)
+dbWriteTable(connect, name="substances", value = substances, row.names = FALSE, append = TRUE)
 
 
-  
+
 #Transform and load substance_at_arrest table
-substance_at_arrest <- data.frame('substance_ata_rrest' = court_data$substance_id, court_data$ARREST_KEY)
-dbWriteTable(connect, name="substance_at_arrest", value=substance_at_arrest, row.names=FALSE, append=TRUE)
-  
+
+substances_at_arrest <- data.frame('substance_id' = merged_data$substance_id, 'arrest_key' = merged_data$ARREST_KEY)
+dbWriteTable(connect, name = "substances_at_arrest", value = substances_at_arrest, row.names = FALSE, append = TRUE)
+
+
+
+
+
+################################## Final Housekeeping ##################################
+
+
+#Order columns so that all "_id" attributes together to easily verify, re-order later for organization
+
+
+colnames(merged_data)
+
+merged_data <- merged_data %>%
+  relocate(judge_id, .before = judge_fname)
+
+merged_data <- merged_data %>%
+  relocate(case_ruling_id, .before = ruling)
+
+merged_data <- merged_data %>%
+  relocate(officer_badge_id, .before = officer_fname)
+
+merged_data <- merged_data %>%
+  relocate(training_id, .before = training_date)
+
+merged_data <- merged_data %>%
+  relocate(languages_id, .before = language_type)
+
+merged_data <- merged_data %>%
+  relocate(weapon_id, .before = weapon_type)
+
+merged_data <- merged_data %>%
+  relocate(victim_id, .before = victim_gender)
+
+merged_data <- merged_data %>%
+  relocate(substance_id, .before = substance_street_name)
+
+merged_data <- merged_data %>%
+  relocate(crime_id, .before = PD_CD)
+
+merged_data <- merged_data %>%
+  relocate(location_id, .before = X_COORD_CD)
+
+merged_data <- merged_data %>%
+  relocate(perp_id, .before = AGE_GROUP)
+
+
+
+################################## Write To CSV File ##################################  
+
+
+#Write merged_data Final total to csv for Group12
+
+#write.csv(merged_data, "merged_data_FinalV2.csv", row.names = FALSE)
